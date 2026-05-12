@@ -19,10 +19,6 @@ public class MixinDebugQueryHandler
     )
     private void tweakeroo_queryResponse(int transactionId, CompoundTag nbt, CallbackInfoReturnable<Boolean> cir)
     {
-        if (Configs.Generic.ENTITY_DATA_SYNC.getBooleanValue() ||
-	        Configs.Generic.ENTITY_DATA_SYNC_BACKUP.getBooleanValue())
-        {
-            EntityDataManager.getInstance().handleVanillaQueryNbt(transactionId, nbt);
-        }
+        EntityDataManager.getInstance().handleVanillaQueryNbt(transactionId, nbt);
     }
 }

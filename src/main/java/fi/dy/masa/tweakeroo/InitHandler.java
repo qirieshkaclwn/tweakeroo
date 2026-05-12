@@ -41,8 +41,6 @@ public class InitHandler implements IInitializationHandler
         WorldLoadHandler.getInstance().registerWorldLoadPreHandler(worldListener);
         WorldLoadHandler.getInstance().registerWorldLoadPostHandler(worldListener);
 
-        ServerHandler.getInstance().registerServerHandler(DataManager.getInstance());
-
         TickHandler.getInstance().registerClientTickHandler(new ClientTickHandler());
         TickHandler.getInstance().registerClientTickHandler(EntityDataManager.getInstance());
 

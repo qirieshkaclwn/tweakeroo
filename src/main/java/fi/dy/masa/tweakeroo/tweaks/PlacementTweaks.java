@@ -632,60 +632,16 @@ public class PlacementTweaks
                 handleAccurate = true;
             }
 
-            if ((handleAccurate || afterClicker) && Configs.Generic.ACCURATE_PLACEMENT_PROTOCOL.getBooleanValue())
+            if (afterClicker)
             {
-                // Carpet-Extra mod accurate block placement protocol support
                 double relX = hitVec.x - posNew.getX();
                 double x = hitVec.x;
                 int afterClickerClickCount = Mth.clamp(Configs.Generic.AFTER_CLICKER_CLICK_COUNT.getIntegerValue(), 0, 32);
 
-                if (handleAccurate && fi.dy.masa.malilib.util.game.BlockUtils.isFacingValidForDirection(stack, facing))
-                {
-                    int protocolValue = 0;
-                    int shiftBy = 1;
-                    final int facingAdj = (facing.get3DDataValue() * 2);
-
-                    protocolValue |= facing.get3DDataValue() << shiftBy;
-                    shiftBy += 3;
-
-                    if (stack.is(ItemTags.TRAPDOORS) || stack.is(ItemTags.STAIRS))
-                    {
-                        // add BLOCK_HALF handling --> (BOTTOM)
-                        int requiredBits = Mth.log2(Mth.smallestEncompassingPowerOfTwo(2));
-                        protocolValue |= (1 << shiftBy);
-                        shiftBy += requiredBits;
-                    }
-
-                    //System.out.printf("prot value (Facing) orig 0x%08X vs 0x%08X\n", facingAdj, protocolValue);
-
-                    x = posNew.getX() + relX + 2 + (protocolValue);
-                }
-                else if (handleAccurate && fi.dy.masa.malilib.util.game.BlockUtils.isFacingValidForOrientation(stack, facing))
-                {
-                    int facingIndex = fi.dy.masa.malilib.util.game.BlockUtils.getOrientationFacingIndex(stack, facing);
-
-                    if (facingIndex > 0)
-                    {
-                        x = posNew.getX() + relX + 2 + (facingIndex * 2);
-                    }
-                    else
-                    {
-                        x = posNew.getX() + relX + 2 + (facing.get3DDataValue() * 2);
-                    }
-                }
-
-                if (afterClicker)
-                {
-                    x += afterClickerClickCount * 16;
-                }
-
-                //System.out.printf("accurate - pre hitVec: %s\n", hitVec);
-                //System.out.printf("processRightClickBlockWrapper facing: %s, x: %.3f, pos: %s, side: %s\n", facing, x, posNew, side);
+                x = posNew.getX() + relX + (afterClickerClickCount * 16);
                 hitVec = new Vec3(x, hitVec.y, hitVec.z);
-                //System.out.printf("accurate - post hitVec: %s\n", hitVec);
             }
 
-            //System.out.printf("accurate - facing: %s, side: %s, posNew: %s, hit: %s\n", facing, side, posNew, hitVec);
             return processRightClickBlockWrapper(controller, player, world, posNew, side, hitVec, hand);
         }
 
@@ -877,69 +833,6 @@ public class PlacementTweaks
         boolean keys = Hotkeys.ACCURATE_BLOCK_PLACEMENT_IN.getKeybind().isKeybindHeld() || Hotkeys.ACCURATE_BLOCK_PLACEMENT_REVERSE.getKeybind().isKeybindHeld();
         accurate = accurate && keys;
 
-        // Carpet-Extra mod accurate block placement protocol support
-        if (flexible && rotation && accurate == false &&
-            Configs.Generic.ACCURATE_PLACEMENT_PROTOCOL.getBooleanValue() &&
-            fi.dy.masa.malilib.util.game.BlockUtils.isFacingValidForDirection(stackOriginal, facing))
-        {
-            facing = facing.getOpposite(); // go from block face to click on to the requested facing
-            //double relX = hitVecIn.x - posIn.getX();
-            //double x = posIn.getX() + relX + 2 + (facing.getId() * 2);
-            int protocolValue = 0;
-            int shiftBy = 1;
-            final int facingAdj = (facing.get3DDataValue() * 2);
-
-            protocolValue |= facing.get3DDataValue() << shiftBy;
-            shiftBy += 3;
-
-            if (stackOriginal.is(ItemTags.TRAPDOORS) || stackOriginal.is(ItemTags.STAIRS))
-            {
-                // add BLOCK_HALF handling --> (BOTTOM)
-                int requiredBits = Mth.log2(Mth.smallestEncompassingPowerOfTwo(2));
-                protocolValue |= (1 << shiftBy);
-                shiftBy += requiredBits;
-            }
-
-            //System.out.printf("prot value (Facing) orig 0x%08X vs 0x%08X\n", facingAdj, protocolValue);
-//           double x = posIn.getX() + 2 + (facing.getIndex() * 2);
-            double x = posIn.getX() + 2 + (protocolValue);
-
-            if (FeatureToggle.TWEAK_AFTER_CLICKER.getBooleanValue())
-            {
-                x += afterClickerClickCount * 16;
-            }
-
-            //System.out.printf("processRightClickBlockWrapper/Direction req facing: %s, x: %.3f, pos: %s, sideIn: %s\n", facing, x, posIn, sideIn);
-            hitVecIn = new Vec3(x, hitVecIn.y, hitVecIn.z);
-        }
-        else if (flexible && rotation && accurate == false &&
-                Configs.Generic.ACCURATE_PLACEMENT_PROTOCOL.getBooleanValue() &&
-                fi.dy.masa.malilib.util.game.BlockUtils.isFacingValidForOrientation(stackOriginal, facing))
-        {
-            facing = facing.getOpposite(); // go from block face to click on to the requested facing
-            //double relX = hitVecIn.x - posIn.getX();
-            //double x = posIn.getX() + relX + 2 + (facing.getId() * 2);
-
-            int facingIndex = fi.dy.masa.malilib.util.game.BlockUtils.getOrientationFacingIndex(stackOriginal, facing);
-            double x;
-            if (facingIndex >= 0)
-            {
-                x = posIn.getX() + 2 + (facingIndex * 2);
-            }
-            else
-            {
-                x = posIn.getX() + 2 + (facing.get3DDataValue() * 2);
-            }
-
-            if (FeatureToggle.TWEAK_AFTER_CLICKER.getBooleanValue())
-            {
-                x += afterClickerClickCount * 16;
-            }
-
-            //System.out.printf("processRightClickBlockWrapper/Orientation req facing: %s, x: %.3f, pos: %s, sideIn: %s\n", facing, x, posIn, sideIn);
-            hitVecIn = new Vec3(x, hitVecIn.y, hitVecIn.z);
-        }
-
         if (FeatureToggle.TWEAK_Y_MIRROR.getBooleanValue() && Hotkeys.PLACEMENT_Y_MIRROR.getKeybind().isKeybindHeld())
         {
             double y = 1 - hitVecIn.y + 2 * posIn.getY(); // = 1 - (hitVec.y - pos.getY()) + pos.getY();
@@ -984,7 +877,6 @@ public class PlacementTweaks
         tryRestockHand(player, hand, stackOriginal);
 
         if (FeatureToggle.TWEAK_AFTER_CLICKER.getBooleanValue() &&
-            Configs.Generic.ACCURATE_PLACEMENT_PROTOCOL.getBooleanValue() == false &&
             world.getBlockState(posPlacement) != stateBefore)
         {
             // TODO --> Add EasyPlacement handling?

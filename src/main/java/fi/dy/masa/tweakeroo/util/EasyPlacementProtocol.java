@@ -15,8 +15,6 @@ import fi.dy.masa.malilib.util.StringUtils;
 public enum EasyPlacementProtocol implements IConfigOptionListEntry, StringRepresentable
 {
     AUTO                ("auto",                  "tweakeroo.gui.label.easy_place_protocol.auto"),
-    V3                  ("v3",                    "tweakeroo.gui.label.easy_place_protocol.v3"),
-    V2                  ("v2",                    "tweakeroo.gui.label.easy_place_protocol.v2"),
     SLAB_ONLY           ("slabs_only",            "tweakeroo.gui.label.easy_place_protocol.slabs_only"),
     NONE                ("none",                  "tweakeroo.gui.label.easy_place_protocol.none");
 

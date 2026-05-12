@@ -63,7 +63,6 @@ public class Hotkeys
     public static final ConfigHotkey STAND_UP_NEARBY_PETS               = new ConfigHotkey("standUpNearbyPets",                 "").apply(HOTKEY_KEY);
     public static final ConfigHotkey SWAP_ELYTRA_CHESTPLATE             = new ConfigHotkey("swapElytraChestplate",              "").apply(HOTKEY_KEY);
     public static final ConfigHotkey SWAP_SPYGLASS_AND_ACTIVATE         = new ConfigHotkey("swapSpyglassAndActivate",           "", KeybindSettings.create(Context.INGAME, KeyAction.BOTH, true, false, false, false, false)).apply(HOTKEY_KEY);
-    public static final ConfigHotkey TOGGLE_AP_PROTOCOL                 = new ConfigHotkey("toggleAccuratePlacementProtocol",   "").apply(HOTKEY_KEY);
     public static final ConfigHotkey TOGGLE_GRAB_CURSOR                 = new ConfigHotkey("toggleGrabCursor",                  "").apply(HOTKEY_KEY);
     public static final ConfigHotkey TOOL_PICK                          = new ConfigHotkey("toolPick",                          "").apply(HOTKEY_KEY);
     public static final ConfigHotkey WRITE_MAPS_AS_IMAGES               = new ConfigHotkey("writeMapsAsImages",                 "").apply(HOTKEY_KEY);
@@ -118,7 +117,6 @@ public class Hotkeys
             STAND_UP_NEARBY_PETS,
             SWAP_ELYTRA_CHESTPLATE,
             SWAP_SPYGLASS_AND_ACTIVATE,
-            TOGGLE_AP_PROTOCOL,
             TOGGLE_GRAB_CURSOR,
             TOOL_PICK,
             AREA_SELECTION_OFFSET,

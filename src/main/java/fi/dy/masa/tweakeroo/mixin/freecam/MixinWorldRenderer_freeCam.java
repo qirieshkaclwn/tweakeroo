@@ -102,7 +102,6 @@ public abstract class MixinWorldRenderer_freeCam
             int x = Mth.floor(camera.position().x) >> 4;
             int z = Mth.floor(camera.position().z) >> 4;
             CameraUtils.markChunksForRebuild(x, z, this.lastUpdatePosX, this.lastUpdatePosZ);
-            // Could send this to Servux in the future
         }
     }
 }

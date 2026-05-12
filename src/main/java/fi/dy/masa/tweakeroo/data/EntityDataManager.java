@@ -58,8 +58,6 @@ import fi.dy.masa.tweakeroo.Reference;
 import fi.dy.masa.tweakeroo.Tweakeroo;
 import fi.dy.masa.tweakeroo.config.Configs;
 import fi.dy.masa.tweakeroo.config.FeatureToggle;
-import fi.dy.masa.tweakeroo.network.ServuxTweaksHandler;
-import fi.dy.masa.tweakeroo.network.ServuxTweaksPacket;
 
 @SuppressWarnings({"deprecation"})
 public class EntityDataManager implements IClientTickHandler, IDataSyncer
@@ -69,29 +67,16 @@ public class EntityDataManager implements IClientTickHandler, IDataSyncer
     {
         return INSTANCE;
     }
-    
-    private final static ServuxTweaksHandler<ServuxTweaksPacket.Payload> HANDLER = ServuxTweaksHandler.getInstance();
+
     private final Minecraft mc;
-    private boolean servuxServer = false;
-    private boolean hasInValidServux = false;
-    private String servuxVersion;
     private boolean checkOpStatus = true;
     private boolean hasOpStatus = false;
     private long lastOpCheck = 0L;
 
-    // Data Cache
     private final ConcurrentHashMap<BlockPos, Pair<Long, Pair<BlockEntity, CompoundData>>> blockEntityCache = new ConcurrentHashMap<>(16, 0.9f, 1);
     private final ConcurrentHashMap<Integer,  Pair<Long, Pair<Entity,      CompoundData>>> entityCache      = new ConcurrentHashMap<>(16, 0.9f, 1);
     private long serverTickTime = 0;
-    // Requests to be executed
-    private final Set<BlockPos> pendingBlockEntitiesQueue = new LinkedHashSet<>();
-    private final Set<Integer> pendingEntitiesQueue = new LinkedHashSet<>();
-    // To save vanilla query packet transaction
-    private final Map<Integer, Either<BlockPos, Integer>> transactionToBlockPosOrEntityId = new HashMap<>();
     private ClientLevel clientWorld;
-
-    private boolean sentBackupPackets = false;
-    private boolean receivedBackupPackets = false;
 
     @Override
     @Nullable
@@ -123,91 +108,10 @@ public class EntityDataManager implements IClientTickHandler, IDataSyncer
 
         if (now - this.serverTickTime > 50)
         {
-            // In this block, we do something every server tick
-            if (!Configs.Generic.ENTITY_DATA_SYNC.getBooleanValue())
-            {
-                this.serverTickTime = now;
-                if (!DataManager.getInstance().hasIntegratedServer() && this.hasServuxServer())
-                {
-                    this.servuxServer = false;
-                    HANDLER.unregisterPlayReceiver();
-                }
-
-                if (!Configs.Generic.ENTITY_DATA_SYNC_BACKUP.getBooleanValue())
-                {
-                    // Expire cached NBT and clear pending Queue if both are disabled
-                    if (!this.pendingBlockEntitiesQueue.isEmpty())
-                    {
-                        this.pendingBlockEntitiesQueue.clear();
-                    }
-
-                    if (!this.pendingEntitiesQueue.isEmpty())
-                    {
-                        this.pendingEntitiesQueue.clear();
-                    }
-
-//                    this.tickCache(now);
-
-                    return;
-                }
-            }
-            else if (!DataManager.getInstance().hasIntegratedServer() &&
-                    !this.hasServuxServer() &&
-                    !this.hasInValidServux &&
-                    this.getWorld() != null)
-            {
-                // Make sure we're Play Registered, and request Metadata
-                HANDLER.registerPlayReceiver(ServuxTweaksPacket.Payload.ID, HANDLER::receivePlayPayload);
-                this.requestMetadata();
-            }
-
             // Expire cached NBT
             this.tickCache(now);
-
-            // 5 queries / server tick
-            for (int i = 0; i < Configs.Generic.SERVER_NBT_REQUEST_RATE.getIntegerValue(); i++)
-            {
-                if (!this.pendingBlockEntitiesQueue.isEmpty())
-                {
-                    var iter = this.pendingBlockEntitiesQueue.iterator();
-                    BlockPos pos = iter.next();
-                    iter.remove();
-
-                    if (this.hasServuxServer())
-                    {
-                        this.requestServuxBlockEntityData(pos);
-                    }
-                    else if (this.shouldUseQuery())
-                    {
-                        // Only check once if we have OP
-                        this.requestQueryBlockEntity(pos);
-                    }
-                }
-                if (!this.pendingEntitiesQueue.isEmpty())
-                {
-                    var iter = this.pendingEntitiesQueue.iterator();
-                    int entityId = iter.next();
-                    iter.remove();
-
-                    if (this.hasServuxServer())
-                    {
-                        this.requestServuxEntityData(entityId);
-                    }
-                    else if (this.shouldUseQuery())
-                    {
-                        // Only check once if we have OP
-                        this.requestQueryEntityData(entityId);
-                    }
-                }
-            }
-
             this.serverTickTime = now;
         }
-    }
-
-    public Identifier getNetworkChannel()
-    {
-        return ServuxTweaksHandler.CHANNEL_ID;
     }
 
     private ClientPacketListener getVanillaHandler()
@@ -220,23 +124,12 @@ public class EntityDataManager implements IClientTickHandler, IDataSyncer
         return null;
     }
 
-    public IPluginClientPlayHandler<ServuxTweaksPacket.Payload> getNetworkHandler()
-    {
-        return HANDLER;
-    }
-
     @Override
     public void reset(boolean isLogout)
     {
         if (isLogout)
         {
             Tweakeroo.debugLog("ServerDataSyncer#reset() - log-out");
-            HANDLER.reset(this.getNetworkChannel());
-            HANDLER.resetFailures(this.getNetworkChannel());
-            this.servuxServer = false;
-            this.hasInValidServux = false;
-            this.sentBackupPackets = false;
-            this.receivedBackupPackets = false;
             this.checkOpStatus = false;
             this.hasOpStatus = false;
             this.lastOpCheck = 0L;
@@ -245,7 +138,7 @@ public class EntityDataManager implements IClientTickHandler, IDataSyncer
         {
             Tweakeroo.debugLog("ServerDataSyncer#reset() - dimension change or log-in");
             long now = System.currentTimeMillis();
-            this.serverTickTime = now - (this.getCacheTimeout() + 5000L);
+            this.serverTickTime = now - 15000L;
             this.tickCache(now);
             this.serverTickTime = now;
             this.clientWorld = mc.level;
@@ -256,8 +149,6 @@ public class EntityDataManager implements IClientTickHandler, IDataSyncer
         // Clear data
         this.blockEntityCache.clear();
         this.entityCache.clear();
-        this.pendingBlockEntitiesQueue.clear();
-        this.pendingEntitiesQueue.clear();
     }
 
     private boolean shouldUseQuery()
@@ -280,24 +171,9 @@ public class EntityDataManager implements IClientTickHandler, IDataSyncer
         this.lastOpCheck = System.currentTimeMillis();
     }
 
-    public long getCacheRefresh()
-    {
-        long result = (long) (Mth.clamp(Configs.Generic.ENTITY_DATA_SYNC_CACHE_REFRESH.getFloatValue(), 0.05f, 1.0f) * 1000L);
-        long clamp = (this.getCacheTimeout() / 2);
-
-        return MathUtils.min(result, clamp);
-    }
-
-    private long getCacheTimeout()
-    {
-        // Increase cache timeout when in Backup Mode.
-        int modifier = Configs.Generic.ENTITY_DATA_SYNC_BACKUP.getBooleanValue() ? 5 : 1;
-        return (long) (MathUtils.clamp((Configs.Generic.ENTITY_DATA_SYNC_CACHE_TIMEOUT.getFloatValue() * modifier), 1.0f, 50.0f) * 1000L);
-    }
-
     private void tickCache(long nowTime)
     {
-        long timeout = this.getCacheTimeout();
+        long timeout = 10000L;
 
         synchronized (this.blockEntityCache)
         {
@@ -320,7 +196,7 @@ public class EntityDataManager implements IClientTickHandler, IDataSyncer
         {
             for (Integer entityId : this.entityCache.keySet())
             {
-                Pair<Long, Pair<Entity, CompoundData>> pair = this.entityCache.get(entityId);
+                Pair<Long, Pair<Entity,      CompoundData>> pair = this.entityCache.get(entityId);
 
                 if (pair != null)       // ???
                 {
@@ -404,20 +280,9 @@ public class EntityDataManager implements IClientTickHandler, IDataSyncer
         return null;
     }
 
-    public void setIsServuxServer()
-    {
-        this.servuxServer = true;
-        this.hasInValidServux = false;
-    }
-
-    public boolean hasServuxServer()
-    {
-        return this.servuxServer;
-    }
-
     public boolean hasBackupStatus()
     {
-        return Configs.Generic.ENTITY_DATA_SYNC_BACKUP.getBooleanValue() && this.hasOpStatus;
+        return false;
     }
 
     public boolean hasOperatorStatus()
@@ -425,32 +290,14 @@ public class EntityDataManager implements IClientTickHandler, IDataSyncer
         return this.hasOpStatus;
     }
 
-    public void setServuxVersion(String ver)
-    {
-        if (ver != null && !ver.isEmpty())
-        {
-            this.servuxVersion = ver;
-            Tweakeroo.debugLog("tweaksDataChannel: joining Servux version {}", ver);
-        }
-        else
-        {
-            this.servuxVersion = "unknown";
-        }
-    }
-
-    public String getServuxVersion()
-    {
-        return this.servuxVersion;
-    }
-
     public int getPendingBlockEntitiesCount()
     {
-        return this.pendingBlockEntitiesQueue.size();
+        return 0;
     }
 
     public int getPendingEntitiesCount()
     {
-        return this.pendingEntitiesQueue.size();
+        return 0;
     }
 
     public int getBlockEntityCacheCount()
@@ -465,28 +312,17 @@ public class EntityDataManager implements IClientTickHandler, IDataSyncer
 
     public boolean getIfReceivedBackupPackets()
     {
-        if (Configs.Generic.ENTITY_DATA_SYNC_BACKUP.getBooleanValue())
-        {
-            return this.sentBackupPackets & this.receivedBackupPackets;
-        }
-
         return false;
     }
 
     @Override
     public void onGameInit()
     {
-        ClientPlayHandler.getInstance().registerClientPlayHandler(HANDLER);
-        HANDLER.registerPlayPayload(ServuxTweaksPacket.Payload.ID, ServuxTweaksPacket.Payload.CODEC, IPluginClientPlayHandler.BOTH_CLIENT);
     }
 
     @Override
     public void onWorldPre()
     {
-        if (!DataManager.getInstance().hasIntegratedServer())
-        {
-            HANDLER.registerPlayReceiver(ServuxTweaksPacket.Payload.ID, HANDLER::receivePlayPayload);
-        }
     }
 
     @Override
@@ -495,75 +331,9 @@ public class EntityDataManager implements IClientTickHandler, IDataSyncer
         // NO-OP
     }
 
-    public void requestMetadata()
-    {
-        if (!DataManager.getInstance().hasIntegratedServer() &&
-            Configs.Generic.ENTITY_DATA_SYNC.getBooleanValue())
-        {
-            CompoundTag nbt = new CompoundTag();
-            nbt.putString("version", Reference.MOD_STRING);
-
-            HANDLER.encodeClientData(ServuxTweaksPacket.MetadataRequest(nbt));
-        }
-    }
-
-    public boolean receiveServuxMetadata(CompoundTag nbt)
-    {
-        if (!DataManager.getInstance().hasIntegratedServer())
-        {
-            Tweakeroo.debugLog("tweaksDataChannel: received METADATA from Servux");
-            this.checkTweaksConfigs(nbt);
-
-            if (Configs.Generic.ENTITY_DATA_SYNC.getBooleanValue())
-            {
-                if (nbt.getIntOr("version", -1) != ServuxTweaksPacket.PROTOCOL_VERSION)
-                {
-                    Tweakeroo.LOGGER.warn("tweaksDataChannel: Mis-matched protocol version!");
-                }
-
-                DataManager.getInstance().setHasServuxServer(true);
-                this.setServuxVersion(nbt.getStringOr("servux", ""));
-                this.setIsServuxServer();
-                
-                return true;
-            }
-        }
-
-        return false;
-    }
-    
-    // This is only meant to keep some Tweaks in sync with the Server, such as Stackable Shulkers.
-    private void checkTweaksConfigs(CompoundTag nbt)
-    {
-        if (nbt.contains("stackingShulkers"))
-        {
-            boolean newValue =nbt.getBooleanOr("stackingShulkers", FeatureToggle.TWEAK_SHULKERBOX_STACKING.getBooleanValue());
-            Tweakeroo.debugLog("checkTweaksConfigs: stackingShulkers: [{}]", newValue);
-            FeatureToggle.TWEAK_SHULKERBOX_STACKING.setBooleanValue(newValue);
-        }
-        if (nbt.contains("stackingShulkersMax"))
-        {
-            int newValue = Math.clamp(nbt.getIntOr("stackingShulkersMax", 64), 1, 99);
-            Tweakeroo.debugLog("checkTweaksConfigs: stackingShulkersMax: [{}]", newValue);
-            Configs.Internal.SHULKER_MAX_STACK_SIZE.setIntegerValue(newValue);
-        }
-    }
-
-    public void onPacketFailure()
-    {
-        DataManager.getInstance().setHasServuxServer(false);
-        this.servuxServer = false;
-        this.hasInValidServux = true;
-    }
-
     public void onEntityDataSyncToggled(ConfigBoolean config)
     {
-        if (this.hasInValidServux)
-        {
-            this.reset(true);
-        }
-
-        // Do something?
+        this.reset(true);
     }
 
     @Override
@@ -584,20 +354,8 @@ public class EntityDataManager implements IClientTickHandler, IDataSyncer
     {
         if (this.blockEntityCache.containsKey(pos))
         {
-            // Refresh at 25%
-            if (!DataManager.getInstance().hasIntegratedServer() &&
-                (Configs.Generic.ENTITY_DATA_SYNC.getBooleanValue() || Configs.Generic.ENTITY_DATA_SYNC_BACKUP.getBooleanValue()))
-            {
-                if (System.currentTimeMillis() - this.blockEntityCache.get(pos).getLeft() > this.getCacheRefresh())
-                {
-//                    Tweakeroo.debugLog("requestBlockEntity: be at pos [{}] requeue at [{}] ms", pos.toShortString(), this.getCacheRefresh());
-                    this.pendingBlockEntitiesQueue.add(pos);
-                }
-            }
-
             if (world instanceof ServerLevel)
             {
-//                return this.refreshBlockEntityFromWorld(world, pos);
                 this.requestBlockEntityFromLocalServer(this.mc, world, pos);
             }
 
@@ -605,13 +363,6 @@ public class EntityDataManager implements IClientTickHandler, IDataSyncer
         }
         else if (world.getBlockState(pos).getBlock() instanceof EntityBlock)
         {
-            if (!DataManager.getInstance().hasIntegratedServer() &&
-                (Configs.Generic.ENTITY_DATA_SYNC.getBooleanValue() || Configs.Generic.ENTITY_DATA_SYNC_BACKUP.getBooleanValue()))
-            {
-//                Tweakeroo.debugLog("requestBlockEntity: be at pos [{}]", pos.toShortString());
-                this.pendingBlockEntitiesQueue.add(pos);
-            }
-
             return this.refreshBlockEntityFromWorld(this.getClientWorld(), pos);
         }
 
@@ -659,31 +410,13 @@ public class EntityDataManager implements IClientTickHandler, IDataSyncer
     {
         if (this.entityCache.containsKey(entityId))
         {
-            // Refresh at 25%
-            if (!DataManager.getInstance().hasIntegratedServer() &&
-                (Configs.Generic.ENTITY_DATA_SYNC.getBooleanValue() || Configs.Generic.ENTITY_DATA_SYNC_BACKUP.getBooleanValue()))
-            {
-                if (System.currentTimeMillis() - this.entityCache.get(entityId).getLeft() > this.getCacheRefresh())
-                {
-                    //Tweakeroo.debugLog("requestEntity: entity Id [{}] requeue at [{}] ms", entityId, this.getCacheRefresh());
-                    this.pendingEntitiesQueue.add(entityId);
-                }
-            }
-
             // Refresh from Server World
             if (world instanceof ServerLevel)
             {
-//                Tweakeroo.debugLog("requestEntity: entity Id [{}] refresh from local server", entityId);
-//                return this.refreshEntityFromWorld(world, entityId);
-                this.requestEntityFromLocalServer(this.mc, world, entityId);            }
+                this.requestEntityFromLocalServer(this.mc, world, entityId);
+            }
 
             return this.entityCache.get(entityId).getRight();
-        }
-        if (!DataManager.getInstance().hasIntegratedServer() &&
-            (Configs.Generic.ENTITY_DATA_SYNC.getBooleanValue() ||
-             Configs.Generic.ENTITY_DATA_SYNC_BACKUP.getBooleanValue()))
-        {
-            this.pendingEntitiesQueue.add(entityId);
         }
 
         return this.refreshEntityFromWorld(this.getClientWorld(), entityId);
@@ -792,12 +525,6 @@ public class EntityDataManager implements IClientTickHandler, IDataSyncer
             }
         }
 
-        if (Configs.Generic.ENTITY_DATA_SYNC.getBooleanValue() ||
-            Configs.Generic.ENTITY_DATA_SYNC_BACKUP.getBooleanValue())
-        {
-            this.requestBlockEntity(world, pos);
-        }
-
         return null;
     }
 
@@ -849,63 +576,7 @@ public class EntityDataManager implements IClientTickHandler, IDataSyncer
             }
         }
 
-        if (Configs.Generic.ENTITY_DATA_SYNC.getBooleanValue() ||
-            Configs.Generic.ENTITY_DATA_SYNC_BACKUP.getBooleanValue())
-        {
-            this.requestEntity(world, entityId);
-        }
-
         return null;
-    }
-
-    private void requestQueryBlockEntity(BlockPos pos)
-    {
-        if (!Configs.Generic.ENTITY_DATA_SYNC_BACKUP.getBooleanValue())
-        {
-            return;
-        }
-
-        ClientPacketListener handler = this.getVanillaHandler();
-
-        if (handler != null)
-        {
-            this.sentBackupPackets = true;
-            handler.getDebugQueryHandler().queryBlockEntityTag(pos, nbtCompound -> handleBlockEntityData(pos, nbtCompound, null));
-            this.transactionToBlockPosOrEntityId.put(((IMixinDataQueryHandler) handler.getDebugQueryHandler()).malilib_currentTransactionId(), Either.left(pos));
-        }
-    }
-
-    private void requestQueryEntityData(int entityId)
-    {
-        if (!Configs.Generic.ENTITY_DATA_SYNC_BACKUP.getBooleanValue())
-        {
-            return;
-        }
-
-        ClientPacketListener handler = this.getVanillaHandler();
-
-        if (handler != null)
-        {
-            this.sentBackupPackets = true;
-            handler.getDebugQueryHandler().queryEntityTag(entityId, nbtCompound -> handleEntityData(entityId, nbtCompound));
-            this.transactionToBlockPosOrEntityId.put(((IMixinDataQueryHandler) handler.getDebugQueryHandler()).malilib_currentTransactionId(), Either.right(entityId));
-        }
-    }
-
-    private void requestServuxBlockEntityData(BlockPos pos)
-    {
-        if (Configs.Generic.ENTITY_DATA_SYNC.getBooleanValue())
-        {
-            HANDLER.encodeClientData(ServuxTweaksPacket.BlockEntityRequest(pos));
-        }
-    }
-
-    private void requestServuxEntityData(int entityId)
-    {
-        if (Configs.Generic.ENTITY_DATA_SYNC.getBooleanValue())
-        {
-            HANDLER.encodeClientData(ServuxTweaksPacket.EntityRequest(entityId));
-        }
     }
 
     @Override
@@ -924,7 +595,6 @@ public class EntityDataManager implements IClientTickHandler, IDataSyncer
     @Override
     public BlockEntity handleBlockEntityData(BlockPos pos, CompoundData data, @Nullable Identifier type)
     {
-        this.pendingBlockEntitiesQueue.remove(pos);
         if (data == null || this.getClientWorld() == null) return null;
 
         BlockEntity blockEntity = this.getClientWorld().getBlockEntity(pos);
@@ -981,12 +651,6 @@ public class EntityDataManager implements IClientTickHandler, IDataSyncer
                         this.blockEntityCache.put(pos, Pair.of(System.currentTimeMillis(), Pair.of(blockEntity2, data)));
                     }
 
-//                    if (Configs.Generic.ENTITY_DATA_LOAD_NBT.getBooleanValue())
-//                    {
-//                        blockEntity2.read(nbt, this.getClientWorld().getRegistryManager());
-//                        this.getClientWorld().addBlockEntity(blockEntity2);
-//                    }
-
                     return blockEntity2;
                 }
             }
@@ -999,7 +663,6 @@ public class EntityDataManager implements IClientTickHandler, IDataSyncer
     @Override
     public Entity handleEntityData(int entityId, CompoundData data)
     {
-        this.pendingEntitiesQueue.remove(entityId);
         if (data == null || this.getClientWorld() == null) return null;
         Entity entity = this.getClientWorld().getEntity(entityId);
 
@@ -1019,11 +682,6 @@ public class EntityDataManager implements IClientTickHandler, IDataSyncer
             {
                 this.entityCache.put(entityId, Pair.of(System.currentTimeMillis(), Pair.of(entity, data)));
             }
-
-//            if (Configs.Generic.ENTITY_DATA_LOAD_NBT.getBooleanValue())
-//            {
-//                EntityUtils.loadNbtIntoEntity(entity, nbt);
-//            }
         }
 
         return entity;
@@ -1056,14 +714,6 @@ public class EntityDataManager implements IClientTickHandler, IDataSyncer
             this.checkOpStatus = false;
             this.lastOpCheck = System.currentTimeMillis();
         }
-
-        Either<BlockPos, Integer> either = this.transactionToBlockPosOrEntityId.remove(transactionId);
-
-        if (either != null)
-        {
-            this.receivedBackupPackets = true;
-            either.ifLeft(pos -> handleBlockEntityData(pos, nbt, null))
-                  .ifRight(entityId -> handleEntityData(entityId, nbt));
-        }
     }
 }
+

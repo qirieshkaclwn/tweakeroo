@@ -1,11 +1,25 @@
-[![](https://jitpack.io/v/sakura-ryoko/tweakeroo.svg)](https://jitpack.io/#sakura-ryoko/tweakeroo)
+# Tweakeroo (LTS/Modified)
 
-Tweakeroo
-==============
-Tweakeroo is a client-side-only Minecraft mod using LiteLoader.
-It adds a selection of miscellaneous, configurable, client-side tweaks to the game.
-Some examples of these are the "flexible block placement" tweak and the "fast block placement" tweak.
-For more information and the downloads (compiled builds), see https://www.curseforge.com/minecraft/mc-mods/tweakeroo/files/all
+**Tweakeroo** — это клиентский мод для Minecraft, который добавляет множество настраиваемых улучшений и функций (твиков).
+
+Данная версия является модифицированным форком, ориентированным на стабильность и удаление избыточных интеграций.
+
+## Основные изменения в этой версии:
+- **Удалена поддержка Carpet Protocol:** Удалены все функции и настройки, связанные с протоколом Carpet (например, Accurate Block Placement v2).
+- **Удалена интеграция с Servux:** Полностью удалена система синхронизации данных сервера (Server Data Sync), которая использовала Servux для получения данных о сущностях и блоках в мультиплеере.
+- **Оптимизация сетевого кода:** Удалены лишние сетевые пакеты и миксины, отвечавшие за связь с модами Carpet и Servux.
+- **Очистка интерфейса и локализации:** Из меню настроек удалены все кнопки и описания, связанные с вышеуказанными модами. Локализации (включая RU, EN, ZH и др.) обновлены и очищены от упоминаний Carpet/Servux.
+
+## Благодарности и Авторы
+Этот проект основан на оригинальном коде **masa** и доработках других контрибьюторов.
+
+- **[masa (maruohon)](https://github.com/maruohon):** Оригинальный автор мода Tweakeroo и библиотеки MaLiLib.
+- **[Andrew54757](https://github.com/Andrew54757):** Автор наработок, использованных в TweakFork / LTS версиях (включая улучшения рендеринга и управления).
+- **Сообщество Tweakeroo:** За переводы и тестирование.
+
+## Лицензия
+Этот мод распространяется под лицензией **GNU LGPLv3**.
+Полный текст лицензии можно найти в файле `LICENSE.txt`.
 
 Compiling
 =========

@@ -13,10 +13,6 @@ public class DataManager implements IServerListener
     private static final DataManager INSTANCE = new DataManager();
     public static DataManager getInstance() { return INSTANCE; }
 
-    private boolean hasCarpetServer;
-    private boolean hasServuxServer;
-    public static final Identifier CARPET_HELLO = Identifier.fromNamespaceAndPath("carpet", "hello");
-    public static final Identifier SERVUX_LITEMATIC_DATA = Identifier.fromNamespaceAndPath("servux", "litematics");
     //private IntegratedServer integratedServer;
     //private DynamicRegistryManager.Immutable registryManager = DynamicRegistryManager.EMPTY;
     private boolean hasIntegratedServer;
@@ -28,8 +24,6 @@ public class DataManager implements IServerListener
         if (isLogout)
         {
             Tweakeroo.debugLog("DataManager#reset() - log-out");
-            this.hasCarpetServer = false;
-            this.hasServuxServer = false;
             //this.registryManager = DynamicRegistryManager.EMPTY;
             this.setHasIntegratedServer(false, null);
         }
@@ -37,26 +31,6 @@ public class DataManager implements IServerListener
         //{
             //Tweakeroo.logger.info("DataManager#reset() - dimension change or log-in");
         //}
-    }
-
-    public void setHasCarpetServer(boolean toggle)
-    {
-        this.hasCarpetServer = toggle;
-    }
-
-    public boolean hasCarpetServer()
-    {
-        return this.hasCarpetServer;
-    }
-
-    public void setHasServuxServer(boolean toggle)
-    {
-        this.hasServuxServer = toggle;
-    }
-
-    public boolean hasServuxServer()
-    {
-        return this.hasServuxServer;
     }
 
     @Override

@@ -41,16 +41,8 @@ public class MixinPlayer_reachOverride
 			}
 			else
 			{
-				if (DataManager.getInstance().hasCarpetServer())
-				{
-					// When using Carpet server, the server-side reach check might be disabled.
-					adj = MathUtils.clamp(Configs.Generic.BLOCK_REACH_DISTANCE.getDoubleValue(), attr.getMinValue(), attr.getMaxValue() + maxOffset);
-				}
-				else
-				{
-					// Calculate a "safe" range for servers
-					adj = MathUtils.clamp(Configs.Generic.BLOCK_REACH_DISTANCE.getDoubleValue(), attr.getMinValue(), orig + maxOffset);
-				}
+				// Calculate a "safe" range for servers
+				adj = MathUtils.clamp(Configs.Generic.BLOCK_REACH_DISTANCE.getDoubleValue(), attr.getMinValue(), orig + maxOffset);
 			}
 		}
 

@@ -23,8 +23,8 @@ import fi.dy.masa.tweakeroo.Tweakeroo;
 
 public enum FeatureToggle implements IEnumBooleanHotkey
 {
-    TWEAK_ACCURATE_BLOCK_PLACEMENT  ("tweakAccurateBlockPlacement",         false, ""),
     TWEAK_AFTER_CLICKER             ("tweakAfterClicker",                   false, "",    KeybindSettings.INGAME_BOTH),
+    TWEAK_ACCURATE_BLOCK_PLACEMENT  ("tweakAccurateBlockPlacement",         false, ""),
     TWEAK_AIM_LOCK                  ("tweakAimLock",                        false, ""),
     TWEAK_ANGEL_BLOCK               ("tweakAngelBlock",                     false, ""),
     TWEAK_AREA_SELECTOR             ("tweakAreaSelector",                   false, ""),
@@ -101,8 +101,6 @@ public enum FeatureToggle implements IEnumBooleanHotkey
     TWEAK_SCULK_PULSE_LENGTH        ("tweakSculkPulseLength",               false, true, ""),
     TWEAK_SELECTIVE_BLOCKS_RENDERING        ("tweakSelectiveBlocksRendering",      false, ""),
     TWEAK_SELECTIVE_BLOCKS_RENDER_OUTLINE   ("tweakSelectiveBlocksRenderOutline",  false, ""),
-//    TWEAK_SERVER_DATA_SYNC          ("tweakServerDataSync",                 false, ""),
-//    TWEAK_SERVER_DATA_SYNC_BACKUP   ("tweakServerDataSyncBackup",           false, ""),
     TWEAK_SHULKERBOX_DISPLAY        ("tweakShulkerBoxDisplay",              false, ""),
     TWEAK_SIGN_COPY                 ("tweakSignCopy",                       false, ""),
     TWEAK_SNAP_AIM                  ("tweakSnapAim",                        false, "",    KeybindSettings.INGAME_BOTH),
@@ -110,7 +108,7 @@ public enum FeatureToggle implements IEnumBooleanHotkey
     TWEAK_SNEAK_1_15_2              ("tweakSneak_1.15.2",                   false, "", "", "tweakeroo.config.feature_toggle.comment.tweakSneak_1_15_2", "tweakeroo.config.feature_toggle.prettyName.tweakSneak_1_15_2", "tweakeroo.config.feature_toggle.name.tweakSneak_1_15_2"),
     TWEAK_SPECTATOR_TELEPORT        ("tweakSpectatorTeleport",              false, ""),
     TWEAK_SPYGLASS_USES_TWEAK_ZOOM  ("tweakSpyglassUsesTweakZoom",          false, ""),
-    TWEAK_STRUCTURE_BLOCK_LIMIT     ("tweakStructureBlockLimit",            false, true, "", ModIds.carpet),
+    TWEAK_STRUCTURE_BLOCK_LIMIT     ("tweakStructureBlockLimit",            false, true, ""),
     TWEAK_SWAP_ALMOST_BROKEN_TOOLS  ("tweakSwapAlmostBrokenTools",          false, ""),
     TWEAK_TAB_COMPLETE_COORDINATE   ("tweakTabCompleteCoordinate",          false, ""),
     TWEAK_TOOL_SWITCH               ("tweakToolSwitch",                     false, ""),

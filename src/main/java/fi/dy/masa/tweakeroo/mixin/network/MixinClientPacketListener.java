@@ -92,27 +92,11 @@ public abstract class MixinClientPacketListener extends ClientCommonPacketListen
         }
     }
 
-    @Inject(method = "handleCustomPayload", at = @At("HEAD"))
-    private void tweakeroo_onCustomPayload(CustomPacketPayload payload, CallbackInfo ci)
-    {
-        if (payload.type().id().equals(DataManager.CARPET_HELLO))
-        {
-            DataManager.getInstance().setHasCarpetServer(true);
-        }
-        else if (payload.type().id().getNamespace().equals("servux"))
-        {
-            DataManager.getInstance().setHasServuxServer(true);
-        }
-    }
-
     @Inject(method = "handleCommands", at = @At("RETURN"))
     private void tweakeroo_onCommandTree(CallbackInfo ci)
     {
-        if (Configs.Generic.ENTITY_DATA_SYNC_BACKUP.getBooleanValue())
-        {
-            // when the player becomes OP, the server sends the command tree to the client
-            EntityDataManager.getInstance().resetOpCheck();
-        }
+        // when the player becomes OP, the server sends the command tree to the client
+        EntityDataManager.getInstance().resetOpCheck();
     }
 
     @Inject(method = "handleEntityEvent",
