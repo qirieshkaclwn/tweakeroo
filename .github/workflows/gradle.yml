@@ -7,11 +7,12 @@ on:
     branches: [ "26.1", "LTS/1.21.11" ]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' # Только для пушей, не для PR
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -32,6 +33,26 @@ jobs:
       # Tests are skipped (-x test) because they require a Fabric environment 
       # that is not fully initialized in this headless CI setup.
       run: ./gradlew build -x test
+
+    - name: Get Version
+      id: get_version
+      run: |
+        VERSION=$(grep 'mod_version' gradle.properties | cut -d'=' -f2 | xargs)
+        MC=$(grep 'minecraft_version_out' gradle.properties | cut -d'=' -f2 | xargs)
+        echo "version=${VERSION}" >> $GITHUB_OUTPUT
+        echo "mc=${MC}" >> $GITHUB_OUTPUT
+        echo "tag=${MC}-${VERSION}-build${{ github.run_number }}" >> $GITHUB_OUTPUT
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ steps.get_version.outputs.tag }}
+        name: Build ${{ steps.get_version.outputs.tag }}
+        files: build/libs/*.jar
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Upload Build Artifacts
       uses: actions/upload-artifact@v4
