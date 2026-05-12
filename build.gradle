@@ -73,7 +73,7 @@ loom {
 
 test {
 	useJUnitPlatform()
-	jvmArgs '-Dtweakeroo.debug.stdout=true'
+	jvmArgs '-Dtweakeroo.debug.stdout=true', '-Dfabric.junit.disable=true'
 	testLogging {
 		events "passed", "skipped", "failed"
 		exceptionFormat "short"
