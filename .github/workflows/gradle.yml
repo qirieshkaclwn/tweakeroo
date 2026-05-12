@@ -1,0 +1,40 @@
+name: Java CI with Gradle
+
+on:
+  push:
+    branches: [ "26.1", "LTS/1.21.11" ]
+  pull_request:
+    branches: [ "26.1", "LTS/1.21.11" ]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 21
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v4
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+
+    - name: Build with Gradle
+      # Tests are skipped (-x test) because they require a Fabric environment 
+      # that is not fully initialized in this headless CI setup.
+      run: ./gradlew build -x test
+
+    - name: Upload Build Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: tweakeroo-fabric-artifacts
+        path: build/libs/
